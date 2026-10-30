@@ -10,3 +10,5 @@ build/
 .env
 .env.*
 .cimedic/
+docs/decisions
+docs/PROMPTS.md
