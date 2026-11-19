@@ -1,0 +1,9 @@
+# Every file-settable option, set to a non-default value.
+max_reruns: 2
+explain: true
+history_backend: file
+comment_mode: new
+flaky_threshold: 0.35
+ignore_patterns:
+  - "^tests/e2e/"
+  - "test_[a-z]+_slow"

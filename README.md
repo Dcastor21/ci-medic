@@ -32,6 +32,23 @@ jobs:
       - uses: <owner>/ci-medic@v0
 ```
 
+## Configuration
+
+Settings come from Action inputs, then an optional `.cimedic.yml` in the repo root, then defaults. Action inputs win.
+
+```yaml
+# .cimedic.yml (every key is optional)
+max_reruns: 0          # rerun failed jobs up to N times to confirm flakiness
+explain: false         # optional LLM explanation; never changes the verdict
+history_backend: cache
+comment_mode: update   # update one PR comment, or post a new one each run
+flaky_threshold: 0.2   # 0 to 1
+ignore_patterns:       # regexes for failures to skip
+  - "^tests/e2e/"
+```
+
+The GitHub token is only accepted as an Action input (or `GITHUB_TOKEN`). Never put it in `.cimedic.yml`. CI Medic refuses to run if it finds one there. Invalid values stop the run with a message listing every problem and where it came from.
+
 ## Local development
 
 ```bash

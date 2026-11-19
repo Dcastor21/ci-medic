@@ -29,7 +29,7 @@ All modules live in `src/cimedic/`. The package version is `cimedic.__version__`
 | Module | Responsibility | Status |
 | --- | --- | --- |
 | `cli` | Entry point for the Action and local runs; wires the pipeline together | `--version` only (argparse, ADR 0004) |
-| `config` | Loads `.cimedic.yml` and Action inputs; validates with defaults | stub |
+| `config` | Loads `.cimedic.yml` and Action inputs; validates with defaults | done (dataclass + PyYAML, ADRs 0005, 0006) |
 | `github` | Thin API client (runs, jobs, logs, rerun, comments); fully mockable | stub |
 | `logs` | Normalizes raw logs into structured lines grouped by job and step | stub |
 | `extract` | Framework parsers behind one `Extractor` interface; generic fallback | stub |
@@ -42,6 +42,7 @@ All modules live in `src/cimedic/`. The package version is `cimedic.__version__`
 ## Key interfaces
 
 - `cli.main(argv: Sequence[str] | None = None) -> int` (console script `cimedic`; returns the exit code)
+- `config.load_config(env: Mapping[str, str] | None = None, config_path: Path | None = None) -> Config` (raises `ConfigError` listing every problem)
 - `Extractor.extract(log: NormalizedLog) -> list[Failure]`
 - `Rule.evaluate(failure: Failure, history: History) -> Evidence | None`
 - `HistoryStore.record(...)`, `HistoryStore.lookup(fingerprint)`
@@ -53,10 +54,30 @@ All modules live in `src/cimedic/`. The package version is `cimedic.__version__`
 - Deterministic classification: same inputs give the same verdict.
 - Least privilege: the Action requests only `actions: read` and `pull-requests: write`.
 
+## Configuration
+
+`load_config()` merges three sources, highest precedence first:
+
+1. Environment: Action inputs as `INPUT_<SETTING>` (for example `INPUT_MAX_RERUNS`). Empty values count as unset, because the runner passes unset inputs as `""`. The composite `action.yml` must map each input to this name explicitly, since composite actions don't export inputs automatically.
+2. `.cimedic.yml` under `$GITHUB_WORKSPACE` (or the current directory). Optional. Unknown keys are errors, to catch typos.
+3. Defaults on `Config`.
+
+| Setting | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `github_token` | str or None | None | Env only: `INPUT_GITHUB_TOKEN`, then `GITHUB_TOKEN`. Rejected if found in the file. Hidden from `repr`. |
+| `max_reruns` | int >= 0 | 0 | |
+| `explain` | bool | false | Env accepts `true`/`false`, case-insensitive |
+| `history_backend` | str | `cache` | Lowercased. Not yet checked against real backends (see `history`) |
+| `comment_mode` | `update` or `new` | `update` | |
+| `flaky_threshold` | float in [0, 1] | 0.2 | |
+| `ignore_patterns` | list of regex | empty | Env: one pattern per line (commas are valid regex). Compiled at load time. |
+
+Error messages name their source (`INPUT_MAX_RERUNS: ...` or `.cimedic.yml: max_reruns: ...`). They never include a token or quote raw file content.
+
 ## Packaging and tooling
 
-- `pyproject.toml`, src layout, hatchling build backend, Python 3.11+, no runtime dependencies yet.
-- Dev extras (`.[dev]`): pytest, pytest-cov, ruff, mypy (strict).
+- `pyproject.toml`, src layout, hatchling build backend, Python 3.11+. Runtime dependency: PyYAML (ADR 0006).
+- Dev extras (`.[dev]`): pytest, pytest-cov, ruff, mypy (strict), types-PyYAML.
 - CI (`.github/workflows/ci.yml`): ruff check, ruff format --check, mypy, pytest with coverage on Python 3.11 and 3.12.
 
 ## Open questions

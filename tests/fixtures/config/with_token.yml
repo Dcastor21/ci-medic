@@ -1,0 +1,3 @@
+# A token must never be read from the repo. The value below is a fake placeholder.
+github_token: fake-token-do-not-load-0123456789
+max_reruns: 1
