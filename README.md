@@ -37,7 +37,10 @@ jobs:
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+cimedic --version
 pytest
+ruff check . && ruff format --check .
+mypy src
 ```
 
 All tests run offline against recorded log fixtures in `tests/fixtures/`. No API keys are needed to develop or test.
